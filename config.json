@@ -1,0 +1,40 @@
+{
+    "model" : {
+        "min_input_size":       288,
+        "max_input_size":       448,
+        "anchors":              [55,69, 75,234, 133,240, 136,129, 142,363, 203,290, 228,184, 285,359, 341,260],
+        "labels":               ["number_plate"]
+    },
+
+    "train": {
+        "train_image_folder":   "train_imgs/",
+        "train_annot_folder":   "train_ann/",
+        "cache_name":           "k.pkl",
+
+        "train_times":          8,
+        "batch_size":           8,
+        "learning_rate":        1e-4,
+        "nb_epochs":            50,
+        "warmup_epochs":        0,
+        "ignore_thresh":        0.5,
+        "gpus":                 "0",
+
+        "grid_scales":          [1,1,1],
+        "obj_scale":            5,
+        "noobj_scale":          1,
+        "xywh_scale":           1,
+        "class_scale":          1,
+
+        "tensorboard_dir":      "logs",
+        "saved_weights_name":   "",
+        "debug":                "True"
+    },
+
+    "valid": {
+        "valid_image_folder":   "val_imgs/",
+        "valid_annot_folder":   "val_ann/",
+        "cache_name"        :   "k_val.pkl" ,
+
+        "valid_times":          1
+    }
+}
