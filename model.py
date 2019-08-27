@@ -8,6 +8,19 @@ from keras.preprocessing.image import img_to_array
 
 #Loading the image
 # im = cv2.imread("input_1.jpg")
+def return_shape(image):
+    return image.shape
+
+def increase_size(image,kernel,ratio):
+    img_height,img_width = return_shape(image)
+    img_height = int(ratio * img_height)
+    img_width = int(ratio * img_width)
+    resized = cv2.resize(image,(img_width,img_height),interpolation=cv2.INTER_AREA)
+    resized = cv2.erode(resized, kernel, iterations = 1)
+    resized = cv2.dilate(resized, kernel, iterations = 1)
+    resized = cv2.erode(resized, kernel, iterations = 1)
+    return resized
+
 
 def get_licence_number(image,roi_box,loaded_model,label_map):
     #Converting image to Grayscale
@@ -33,26 +46,33 @@ def get_licence_number(image,roi_box,loaded_model,label_map):
     		displayCnt = approx
     		break
 
-    warped = four_point_transform(im_gray, displayCnt.reshape(4, 2))
-    thresh = cv2.threshold(warped, 200, 255,cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
-    thresh = cv2.threshold(thresh, 200, 255,cv2.THRESH_BINARY_INV)[1]
-    
+    img_erode = four_point_transform(im_gray, displayCnt.reshape(4, 2))
 
-    dim = (720, 240)
-    # resize image
-    resized = cv2.resize(thresh, dim, interpolation = cv2.INTER_AREA)
+    kernel = np.ones((3,3),np.uint8)
 
-    ret, im_th = cv2.threshold(resized, 0, 255, cv2.THRESH_BINARY_INV)
+    while return_shape(img_erode)[1] < 720 or return_shape(img_erode)[0] < 240:
+        img_erode = increase_size(img_erode, kernel, 2)
 
-    ctrs,_ = cv2.findContours(im_th.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    thresh = cv2.threshold(img_erode, 180, 255,cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
+    thresh = cv2.threshold(thresh, 0, 255,cv2.THRESH_BINARY_INV)[1]
+
+    cv2.imshow("New",thresh)
+
+    ret, resized = cv2.threshold(thresh, 0, 255, cv2.THRESH_BINARY_INV)
+
+    ctrs,_ = cv2.findContours(resized.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     rects = []
 
+    c_h,c_w = return_shape(resized) 
+    
     for ctr in ctrs: 
         (x, y, w, h) = cv2.boundingRect(ctr)
-        if w >=30 and h >= 70:
+        if w >=int(c_w/30) and h >= int(c_h/4):
             rects.append(cv2.boundingRect(ctr))
-    cv2.imshow("input_image_number_plate",resized)
+
+    cv2.imshow("Input_image_number_plate",resized)
+
     list_alpha_numerics = []
     #Predicting the alphanumerics
     for rect in rects:
@@ -60,7 +80,7 @@ def get_licence_number(image,roi_box,loaded_model,label_map):
         if roi.any():
         # Resize the image   
             roi = cv2.resize(roi, (64, 64), interpolation=cv2.INTER_AREA)
-            roi = cv2.dilate(roi, (3, 3))
+            # roi = cv2.dilate(roi, (3, 3))
             X = img_to_array(roi)
             X = X/255
             X = X.reshape(-1,64,64,1)
@@ -69,4 +89,6 @@ def get_licence_number(image,roi_box,loaded_model,label_map):
                 if label_map[key] == nbr:
                     nbr =  key
             list_alpha_numerics.append(nbr)
+            cv2.imshow("rects",roi)
+            cv2.waitKey()
     return list_alpha_numerics
